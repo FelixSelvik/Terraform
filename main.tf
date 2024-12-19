@@ -165,26 +165,21 @@ resource "aws_instance" "my_ec2" {
 # Security Group for EC2 (allow MySQL and HTTP access)
 resource "aws_security_group" "ec2_mysql_sg" {
   name        = "ec2_mysql_sg"
-  description = "Allow MySQL and HTTP access"
+  description = "Allow all traffic"
 
+  # Ingress rule to allow all incoming traffic (ALL ALL)
   ingress {
-    from_port   = 3306
-    to_port     = 3306
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # Allow MySQL access (restrict in production)
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"  # -1 means all protocols
+    cidr_blocks = ["0.0.0.0/0", "::/0"]  # Allow all sources (IPv4 and IPv6)
   }
 
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # Allow HTTP access
-  }
-
+  # Egress rule to allow all outgoing traffic (ALL ALL)
   egress {
     from_port   = 0
     to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    protocol    = "-1"  # -1 means all protocols
+    cidr_blocks = ["0.0.0.0/0", "::/0"]  # Allow all destinations (IPv4 and IPv6)
   }
 }
