@@ -76,7 +76,7 @@ resource "aws_iam_instance_profile" "ec2_instance_profile" {
 resource "aws_instance" "my_ec2" {
   ami                         = var.instance_ami
   instance_type               = "t2.micro"
-  key_name                    = var.key_name
+  #key_name                    = var.key_name
   associate_public_ip_address = true
   iam_instance_profile        = aws_iam_instance_profile.ec2_instance_profile.name
 
