@@ -42,6 +42,18 @@ resource "aws_iam_policy" "s3_sync_policy" {
   })
 }
 
+# Generate a new SSH key pair
+resource "tls_private_key" "ssh_key" {
+  algorithm = "RSA"
+  rsa_bits  = 2048
+}
+
+# Generate a new SSH key pair
+resource "aws_key_pair" "generated_key" {
+  key_name   = "terraform-key"
+  public_key = tls_private_key.ssh_key.public_key_openssh
+}
+
 # Create IAM role for EC2 with permissions to assume the role
 resource "aws_iam_role" "ec2_role" {
   name = "EC2RoleWithS3Access"
@@ -76,8 +88,8 @@ resource "aws_iam_instance_profile" "ec2_instance_profile" {
 resource "aws_instance" "my_ec2" {
   ami                         = var.instance_ami
   instance_type               = "t2.micro"
-  #key_name                    = var.key_name
   associate_public_ip_address = true
+  key_name                    = aws_key_pair.generated_key.key_name  # Use the generated key pair
   iam_instance_profile        = aws_iam_instance_profile.ec2_instance_profile.name
 
   user_data = <<-EOF
