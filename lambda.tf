@@ -10,7 +10,7 @@ resource "aws_lambda_function" "my_lambda" {
       DB_HOST     = aws_instance.my_ec2.public_ip       # EC2 public IP as the database host
       DB_USERNAME = var.db_username
       DB_PASSWORD = var.db_password
-      BUCKET_NAME = var.bucket_name
+      BUCKET_NAME = aws_s3_bucket.my_bucket.bucket
       DB_NAME     = var.db_name
     }
   }
@@ -42,7 +42,7 @@ resource "aws_iam_role_policy" "lambda_s3_policy" {
       {
         Effect   = "Allow"
         Action   = "s3:PutObject"
-        Resource = "arn:aws:s3:::${var.bucket_name}/*"
+        Resource = "${aws_s3_bucket.my_bucket.arn}/*"
       }
     ]
   })

@@ -2,6 +2,23 @@ provider "aws" {
   region = var.aws_region
 }
 
+# Generate a random string for a unique bucket name
+resource "random_string" "bucket_suffix" {
+  length  = 8
+  special = false
+  upper   = false
+}
+
+# Create an S3 bucket with a random name
+resource "aws_s3_bucket" "my_bucket" {
+  bucket = "r0845037-${random_string.bucket_suffix.result}"
+
+  tags = {
+    Name        = "MyAppFileStorage"
+    Environment = "Dev"
+  }
+}
+
 # Create an IAM policy for S3 access
 resource "aws_iam_policy" "s3_sync_policy" {
   name        = "S3SyncPolicy"
@@ -17,8 +34,8 @@ resource "aws_iam_policy" "s3_sync_policy" {
           "s3:Sync"
         ]
         Resource = [
-          "arn:aws:s3:::r0845037-terraform",
-          "arn:aws:s3:::r0845037-terraform/*"
+          aws_s3_bucket.my_bucket.arn,
+          "${aws_s3_bucket.my_bucket.arn}/*"
         ]
       }
     ]
@@ -55,23 +72,13 @@ resource "aws_iam_instance_profile" "ec2_instance_profile" {
   role = aws_iam_role.ec2_role.name
 }
 
-resource "aws_s3_bucket" "my_bucket" {
-  bucket = "r0845037-terraform"  # Ensure this is unique
-
-  tags = {
-    Name        = "MyAppFileStorage"
-    Environment = "Dev"
-  }
-}
-
-
 # EC2 Instance with MySQL and attached IAM role
 resource "aws_instance" "my_ec2" {
   ami                         = var.instance_ami
   instance_type               = "t2.micro"
   key_name                    = var.key_name
   associate_public_ip_address = true
-  iam_instance_profile        = aws_iam_instance_profile.ec2_instance_profile.name  # Referencing the IAM instance profile here
+  iam_instance_profile        = aws_iam_instance_profile.ec2_instance_profile.name
 
   user_data = <<-EOF
             #!/bin/bash
@@ -104,17 +111,12 @@ resource "aws_instance" "my_ec2" {
             mysql -e "GRANT ALL PRIVILEGES ON ${var.db_name}.* TO '${var.db_username}'@'%';"
             mysql -e "FLUSH PRIVILEGES;"
 
-            # Run ALTER USER command to set native password authentication
-            mysql -e "ALTER USER '${var.db_username}'@'%' IDENTIFIED WITH mysql_native_password BY '${var.db_password}';"
-            mysql -e "FLUSH PRIVILEGES;"
-
             # Create 'files' table in the database
             mysql -e "USE ${var.db_name}; CREATE TABLE IF NOT EXISTS files (
               id INT AUTO_INCREMENT PRIMARY KEY,
               filename VARCHAR(255) NOT NULL,
               uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );"
-
 
             sudo chown -R www-data:www-data /var/www/html
             sudo chmod -R 755 /var/www/html
@@ -129,9 +131,7 @@ resource "aws_instance" "my_ec2" {
 
             sleep 30
 
-
-            echo "* * * * * root export PATH=$PATH:/usr/local/bin && AWS_REGION=eu-west-1 /usr/local/bin/aws s3 sync s3://r0845037-terraform/ /var/www/html/ --exact-timestamps >> /var/log/s3-sync.log 2>&1" > /etc/cron.d/s3-sync
-
+            echo "* * * * * root export PATH=$PATH:/usr/local/bin && AWS_REGION=${var.aws_region} /usr/local/bin/aws s3 sync s3://${aws_s3_bucket.my_bucket.bucket}/ /var/www/html/ --exact-timestamps >> /var/log/s3-sync.log 2>&1" > /etc/cron.d/s3-sync
 
             # Set permissions for the cron job
             chmod 644 /etc/cron.d/s3-sync
@@ -142,9 +142,7 @@ resource "aws_instance" "my_ec2" {
             # Ensure Apache service is started
             systemctl start apache2
             systemctl enable apache2
-
             EOF
-
 
   tags = {
     Name        = "MyWebServer"

@@ -12,7 +12,6 @@ crash.log
 crash.*.log
 
 # Exclude all .tfvars files, which may contain sensitive data (passwords, secrets)
-*.tfvars
 *.tfvars.json
 
 # Ignore override files (used to override resources locally)

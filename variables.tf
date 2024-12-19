@@ -3,10 +3,6 @@ variable "aws_region" {
   default     = "eu-west-1"
 }
 
-variable "bucket_name" {
-  description = "The name of the S3 bucket"
-}
-
 variable "db_username" {
   description = "The MySQL database username"
 }
